@@ -37,20 +37,31 @@ PROJECT/
 └── sample_images/       # Sample test images
 ```
 
+
+
+### ⏮️ Prerequisites
+
+Ensure you have the following installed:
+
+- Python (>=3.7)
+- Required libraries (can be installed via `requirements.txt`)
+
 ## 🛠️ Installation
 
-1. **Clone the repository**
-```bash
-git clone <repository-url>
-cd PROJECT
-```
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/nikhilkr16/Plant-Disease-Detection-System.git
+   ```
+2. Navigate to the repository:
+   ```bash
+   cd Plant-Disease-Detection-System
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-2. **Install dependencies**
-```bash
-pip install -r requirements.txt
-```
-
-3. **Download PlantVillage Dataset**
+4. **Download PlantVillage Dataset**
    - Download from [PlantVillage Dataset](https://www.kaggle.com/emmarex/plantdisease)
    - Extract and organize in the `data/` folder following the structure shown below
 
