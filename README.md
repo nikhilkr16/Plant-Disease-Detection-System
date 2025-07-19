@@ -43,7 +43,7 @@ PROJECT/
 
 Ensure you have the following installed:
 
-- Python (>=3.7)
+- Python 3.11
 - Required libraries (can be installed via `requirements.txt`)
 
 ## 🛠️ Installation
