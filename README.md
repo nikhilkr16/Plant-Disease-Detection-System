@@ -155,6 +155,38 @@ The model achieves high accuracy on validation data with robust performance acro
 - **Education**: Teaching tool for agricultural students
 - **Mobile Apps**: Integration into farming applications
 
+
+## Project Outputs
+
+The system provides the following outputs:
+
+1. **Prediction Results**
+   - Predicted disease class
+   - Confidence score
+   - Top 3 predictions with confidence levels
+   - Confidence level interpretation (High/Moderate/Low)
+
+2. **Disease Information**
+   - Detailed description of the predicted disease
+   - Common symptoms
+   - Recommended treatment methods
+
+3. **Visual Outputs**
+   - Interactive confidence chart showing top 5 predictions
+   - Uploaded image display
+   - Color-coded confidence indicators
+
+4. **Model Training Outputs** (when training is performed)
+   - Training history plots (accuracy and loss)
+   - Model evaluation metrics
+   - Confusion matrix
+   - Saved model file (best_plant_disease_model.h5)
+
+5. **Demo Mode Outputs** (when model is not available)
+   - Mock predictions for demonstration
+   - Sample disease information
+   - Simulated confidence scores
+     
 ## 🔧 Technical Requirements
 
 - Python 3.7+
@@ -162,6 +194,16 @@ The model achieves high accuracy on validation data with robust performance acro
 - OpenCV 4.8+
 - Streamlit 1.28+
 - Sufficient GPU memory for training (optional but recommended)
+- 
+## Tech Stack
+
+- **Python**: The primary programming language used for developing the application.
+- **TensorFlow/Keras**: Used for building and training the machine learning models.
+- **OpenCV**: Utilized for image processing tasks.
+- **Streamlit**: For creating the web application interface.
+- **Tkinter**: Used for building the GUI application.
+- **Pandas & NumPy**: For data manipulation and numerical operations.
+- **Matplotlib & Seaborn**: For data visualization.
 
 ## 📸 Sample Usage
 
@@ -198,41 +240,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 📞 Contact
 
-For questions or support, please open an issue in the repository.
-
-## Project Outputs
-
-The system provides the following outputs:
-
-1. **Prediction Results**
-   - Predicted disease class
-   - Confidence score
-   - Top 3 predictions with confidence levels
-   - Confidence level interpretation (High/Moderate/Low)
-
-2. **Disease Information**
-   - Detailed description of the predicted disease
-   - Common symptoms
-   - Recommended treatment methods
-
-3. **Visual Outputs**
-   - Interactive confidence chart showing top 5 predictions
-   - Uploaded image display
-   - Color-coded confidence indicators
-
-4. **Model Training Outputs** (when training is performed)
-   - Training history plots (accuracy and loss)
-   - Model evaluation metrics
-   - Confusion matrix
-   - Saved model file (best_plant_disease_model.h5)
-
-5. **Demo Mode Outputs** (when model is not available)
-   - Mock predictions for demonstration
-   - Sample disease information
-   - Simulated confidence scores
-
-## Technical Details
-
----
-
-**Built with ❤️ for sustainable agriculture and AI education** # -Plant-Disease-Detection-System
+NIKHIL KUMAR
+BTECH/10883/22
