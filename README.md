@@ -2,6 +2,12 @@
 
 An AI-powered system for detecting plant diseases from leaf images using Convolutional Neural Networks (CNN).
 
+**Project Link:-** https://plantdiseasedetectionsystems.streamlit.app/
+
+<img width="1852" height="2148" alt="screencapture-plantdiseasedetectionsystems-streamlit-app-2025-07-19-13_06_46" src="https://github.com/user-attachments/assets/347f747b-04a8-4147-9ef5-9cad990e18c9" />
+
+
+
 ## 📋 Project Overview
 
 This project uses deep learning to classify plant diseases from leaf images. The system is trained on the PlantVillage dataset and can identify 5 different classes:
