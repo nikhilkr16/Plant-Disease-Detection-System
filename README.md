@@ -1,7 +1,3 @@
-Of course. I have updated the content of your `README.md` file to reflect all the advanced models and techniques we implemented. The original layout and all your personal information have been preserved, exactly as you requested.
-
-**Instructions:**
-Replace the entire content of your `README.md` file with the text below.
 
 -----
 
@@ -11,7 +7,8 @@ An AI-powered system for detecting plant diseases from leaf images using Convolu
 
 **Project Link:-** [https://plantdiseasedetectionsystems.streamlit.app/](https://plantdiseasedetectionsystems.streamlit.app/)
 
-\<img width="1852" height="2148" alt="screencapture-plantdiseasedetectionsystems-streamlit-app-2025-07-19-13\_06\_46" src="[https://github.com/user-attachments/assets/347f747b-04a8-4147-9ef5-9cad990e18c9](https://github.com/user-attachments/assets/347f747b-04a8-4147-9ef5-9cad990e18c9)" /\>
+<img width="1831" height="928" alt="image" src="https://github.com/user-attachments/assets/9ee9be58-8c01-4c9b-bbcf-97689f095bf4" />
+
 
 ## 📋 Project Overview
 
