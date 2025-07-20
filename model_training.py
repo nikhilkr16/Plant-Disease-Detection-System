@@ -3,6 +3,13 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+from collections import Counter
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras.models import Model
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras.models import Model
+
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, BatchNormalization
 from tensorflow.keras.optimizers import Adam
@@ -26,6 +33,7 @@ class PlantDiseaseDetector:
     def download_sample_data(self):
         """Download and prepare sample plant disease data"""
         print("Setting up sample data structure...")
+        pass
         
         # Create data directories
         os.makedirs('data/train', exist_ok=True)
@@ -66,11 +74,12 @@ class PlantDiseaseDetector:
         # Data augmentation for training
         train_datagen = ImageDataGenerator(
             rescale=1./255,
-            rotation_range=40,
-            width_shift_range=0.2,
-            height_shift_range=0.2,
-            shear_range=0.2,
-            zoom_range=0.2,
+            rotation_range=50,
+            width_shift_range=0.3,
+            height_shift_range=0.3,
+            shear_range=0.3,
+            zoom_range=0.3,
+            vertical_flip=True,     
             horizontal_flip=True,
             fill_mode='nearest'
         )
@@ -98,40 +107,84 @@ class PlantDiseaseDetector:
         
         return train_generator, validation_generator
     
-    def build_model(self, num_classes):
-        """Build CNN model architecture"""
-        model = Sequential([
-            # First Convolutional Block
-            Conv2D(32, (3, 3), activation='relu', input_shape=(self.img_height, self.img_width, 3)),
-            BatchNormalization(),
-            MaxPooling2D(2, 2),
+    # def build_model(self, num_classes):
+        # """Build CNN model architecture"""
+        # model = Sequential([
+        #     # First Convolutional Block
+        #     Conv2D(32, (3, 3), activation='relu', input_shape=(self.img_height, self.img_width, 3)),
+        #     BatchNormalization(),
+        #     MaxPooling2D(2, 2),
             
-            # Second Convolutional Block
-            Conv2D(64, (3, 3), activation='relu'),
-            BatchNormalization(),
-            MaxPooling2D(2, 2),
+        #     # Second Convolutional Block
+        #     Conv2D(64, (3, 3), activation='relu'),
+        #     BatchNormalization(),
+        #     MaxPooling2D(2, 2),
             
-            # Third Convolutional Block
-            Conv2D(128, (3, 3), activation='relu'),
-            BatchNormalization(),
-            MaxPooling2D(2, 2),
+        #     # Third Convolutional Block
+        #     Conv2D(128, (3, 3), activation='relu'),
+        #     BatchNormalization(),
+        #     MaxPooling2D(2, 2),
             
-            # Fourth Convolutional Block
-            Conv2D(256, (3, 3), activation='relu'),
-            BatchNormalization(),
-            MaxPooling2D(2, 2),
+        #     # Fourth Convolutional Block
+        #     Conv2D(256, (3, 3), activation='relu'),
+        #     BatchNormalization(),
+        #     MaxPooling2D(2, 2),
             
-            # Flatten and Dense layers
-            Flatten(),
-            Dense(512, activation='relu'),
-            Dropout(0.5),
-            Dense(256, activation='relu'),
-            Dropout(0.3),
-            Dense(num_classes, activation='softmax')
-        ])
+        #     # Flatten and Dense layers
+        #     Flatten(),
+        #     Dense(512, activation='relu'),
+        #     Dropout(0.5),
+        #     Dense(256, activation='relu'),
+        #     Dropout(0.3),
+        #     Dense(num_classes, activation='softmax')
+        # ])
         
+    def build_vgg16_model(self, num_classes):
+        """Build a transfer learning model using VGG16"""
+
+
+        base_model = VGG16(input_shape=(self.img_height, self.img_width, 3),
+                           include_top=False,
+                           weights='imagenet')
+        base_model.trainable = False
+
+        x = Flatten()(base_model.output)
+        x = Dense(512, activation='relu')(x)
+        x = Dropout(0.5)(x)
+        output_layer = Dense(num_classes, activation='softmax')(x)
+
+        model = Model(inputs=base_model.input, outputs=output_layer)
+
+        # Load the VGG16 model with pre-trained ImageNet weights,
+        # excluding the final classification layer.
+        base_model = VGG16(input_shape=(self.img_height, self.img_width, 3),
+                           include_top=False,
+                           weights='imagenet')
+
+        # Freeze the layers of the base VGG16 model so they are not updated
+        # during the training process.
+        base_model.trainable = False
+
+        # Create a new classifier head on top of the base model
+        x = Flatten()(base_model.output)
+        x = Dense(512, activation='relu')(x)
+        x = Dropout(0.5)(x)
+        # The final output layer with softmax activation for multi-class classification
+        output_layer = Dense(num_classes, activation='softmax')(x)
+
+        # Combine the base model and the new classifier head
+        model = Model(inputs=base_model.input, outputs=output_layer)
+
+        # Compile the model
         model.compile(
-            optimizer=Adam(learning_rate=0.001),
+            optimizer=Adam(learning_rate=0.0001),
+            loss='categorical_crossentropy',
+            metrics=['accuracy']
+        )
+
+
+        model.compile(
+            optimizer=Adam(learning_rate=0.0001),
             loss='categorical_crossentropy',
             metrics=['accuracy']
         )
@@ -139,8 +192,15 @@ class PlantDiseaseDetector:
         self.model = model
         return model
     
-    def train_model(self, train_generator, validation_generator, epochs=50):
+    def train_model(self, train_generator, validation_generator, epochs=200, class_weights=None):
         """Train the model"""
+        
+        history = self.model.fit(
+            train_generator,
+            class_weight=class_weights,
+            # ... other parameters
+        )
+
         # Callbacks
         checkpoint = ModelCheckpoint(
             'models/best_plant_disease_model.h5',
@@ -177,6 +237,7 @@ class PlantDiseaseDetector:
             validation_data=validation_generator,
             validation_steps=validation_steps,
             callbacks=[checkpoint, early_stopping, reduce_lr],
+            class_weight=class_weights,
             verbose=1
         )
         
@@ -205,6 +266,7 @@ class PlantDiseaseDetector:
         plt.tight_layout()
         plt.savefig('models/training_history.png')
         plt.show()
+        pass
     
     def evaluate_model(self, validation_generator):
         """Evaluate model performance"""
@@ -240,7 +302,7 @@ class PlantDiseaseDetector:
         plt.show()
         
         return report, cm
-
+    pass
 def main():
     # Initialize detector
     detector = PlantDiseaseDetector()
@@ -256,16 +318,38 @@ def main():
     # Prepare data
     train_gen, val_gen = detector.prepare_data_generators()
     
+
+
+
+    # Count the number of samples in each class
+    class_counts = Counter(train_gen.classes)
+    total_samples = len(train_gen.classes)
+    num_classes = len(class_counts)
+
+    # Calculate class weights
+    class_weights = {}
+    for i, count in class_counts.items():
+        weight = total_samples / (num_classes * count)
+        class_weights[i] = weight
+
+    print("Calculated Class Weights:")
+    for i, class_name in enumerate(detector.class_names):
+        print(f"  - {class_name}: {class_weights[i]:.2f}")
+
+
+
+
     # Build model
     num_classes = len(detector.class_names)
-    model = detector.build_model(num_classes)
+    model = detector.build_vgg16_model(num_classes) 
+        # model = detector.build_model(num_classes)
     
     print("Model Architecture:")
     model.summary()
     
     # Train model
     print("Starting training...")
-    history = detector.train_model(train_gen, val_gen, epochs=50)
+    history = detector.train_model(train_gen, val_gen, epochs=200,class_weights=class_weights)
     
     # Plot history
     detector.plot_training_history(history)

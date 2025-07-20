@@ -1,7 +1,12 @@
 streamlit
-Pillow
-numpy
+tensorflow
 pandas
+Pillow
 plotly
+opencv-python
+scikit-learn
+matplotlib
+numpy
+seaborn
 requests
-pandoc
+streamlit-option-menu

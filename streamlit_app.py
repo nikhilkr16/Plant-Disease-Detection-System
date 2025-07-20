@@ -2,19 +2,9 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import plotly.express as px
-import plotly.graph_objects as go
 import pandas as pd
 import os
 
-# Try importing the predictor
-try:
-    from utils import PlantDiseasePredictor
-    TENSORFLOW_AVAILABLE = True
-except ImportError:
-    TENSORFLOW_AVAILABLE = False
-    st.warning("⚠️ Running in DEMO mode: No real predictions will be made.")
-
-# Page configuration
 st.set_page_config(
     page_title="Plant Disease Detection",
     page_icon="🌱",
@@ -22,7 +12,13 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
+try:
+    from utils import EnsemblePredictor
+    TENSORFLOW_AVAILABLE = True
+except ImportError:
+    TENSORFLOW_AVAILABLE = False
+
+# Your original Custom CSS is unchanged
 st.markdown("""
 <style>
 .main-header {
@@ -65,44 +61,39 @@ p{
 
 @st.cache_resource
 def load_predictor():
-    """Load the plant disease predictor model"""
+    """Load the ensemble predictor model or a mock version."""
     if TENSORFLOW_AVAILABLE:
-        return PlantDiseasePredictor()
-    else:
-        # Return a mock predictor for demo mode
-        class MockPredictor:
-            def predict_disease(self, pil_image):
-                # Return mock predictions
-                mock_result = {
-                    'predicted_class': 'Apple_Healthy',
-                    'confidence': 0.85,
-                    'all_predictions': {
-                        'Apple_Healthy': 0.85,
-                        'Apple_Scab': 0.10,
-                        'Apple_Black_Rot': 0.05
-                    },
-                    'top_3_predictions': [
-                        ('Apple_Healthy', 0.85),
-                        ('Apple_Scab', 0.10),
-                        ('Apple_Black_Rot', 0.05)
-                    ]
-                }
-                return mock_result, "Demo mode prediction"
-            
-            def get_disease_info(self, disease_class):
-                return {
-                    'description': 'This is a demo prediction. The actual model is not available in this environment.',
-                    'symptoms': 'No real symptoms available in demo mode.',
-                    'treatment': 'Please run the model locally for accurate predictions.'
-                }
-        return MockPredictor()
+        try:
+            model_paths = [
+                'models/efficientnetv2_best.h5',
+                'models/resnet50v2_best.h5'
+            ]
+            return EnsemblePredictor(model_paths)
+        except Exception as e:
+            # If models fail to load, we'll fall through to the MockPredictor
+            print(f"Failed to load models: {e}. Running in demo mode.")
+            pass
+    
+    # If TF is not available or model loading fails, create and return a Mock Predictor
+    class MockPredictor:
+        def predict(self, pil_image):
+            return {
+                'predicted_class': 'Apple_Healthy (DEMO)',
+                'confidence': 0.85,
+                'all_predictions': { 'Apple_Healthy (DEMO)': 0.85, 'Apple_Scab (DEMO)': 0.10 }
+            }
+        def get_disease_info(self, disease_class):
+            return {
+                'description': 'This is a demo. Models or main libraries not found.',
+                'symptoms': 'N/A',
+                'treatment': 'N/A'
+            }
+    return MockPredictor()
 
 def main():
-    # Title
     st.markdown('<h1 class="main-header">🌱 Plant Disease Detection System</h1>', 
                 unsafe_allow_html=True)
     
-    # Sidebar
     with st.sidebar:
         st.header("📋 Instructions")
         st.markdown("""
@@ -113,8 +104,7 @@ def main():
         """)
         
         if not TENSORFLOW_AVAILABLE:
-            st.warning("⚠️ Running in DEMO mode")
-            st.info("For real predictions, run the app locally with TensorFlow installed.")
+            st.warning("⚠️ Running in DEMO mode. Main libraries not found.")
         
         st.header("🌿 Supported Plants")
         st.markdown("""
@@ -123,16 +113,13 @@ def main():
         - **Healthy plants**: All types
         """)
     
-    # Load predictor
     predictor = load_predictor()
     
-    # Main content
     col1, col2 = st.columns([1, 1])
     
     with col1:
         st.header("📷 Image Upload")
         
-        # File uploader
         uploaded_file = st.file_uploader(
             "Choose a plant leaf image...",
             type=['jpg', 'jpeg', 'png', 'bmp'],
@@ -140,25 +127,19 @@ def main():
         )
         
         if uploaded_file is not None:
-            # Display image
             image = Image.open(uploaded_file)
             st.image(image, caption="Uploaded Image", use_column_width=True)
             
-            # Image info
             st.info(f"📊 Image Size: {image.size[0]} x {image.size[1]} pixels")
             
-            # Predict button
             if st.button("🔍 Predict Disease", type="primary", use_container_width=True):
                 with st.spinner("Analyzing image..."):
-                    # Make prediction
-                    result, message = predictor.predict_disease(pil_image=image)
-                    
-                    if result is None:
-                        st.error(f"❌ Prediction failed: {message}")
-                    else:
-                        # Store result in session state
+                    try:
+                        result = predictor.predict(pil_image=image)
                         st.session_state.prediction_result = result
                         st.success("✅ Analysis complete!")
+                    except Exception as e:
+                        st.error(f"❌ Prediction failed: {e}")
         else:
             st.info("Please upload an image to begin analysis.")
     
@@ -167,12 +148,9 @@ def main():
         
         if 'prediction_result' in st.session_state:
             result = st.session_state.prediction_result
-            
-            # Main prediction
             predicted_class = result['predicted_class']
             confidence = result['confidence']
             
-            # Prediction box
             st.markdown(f"""
             <div class="prediction-box">
                 <h3>🏆 Predicted Disease</h3>
@@ -181,7 +159,6 @@ def main():
             </div>
             """, unsafe_allow_html=True)
             
-            # Confidence interpretation
             if confidence > 0.8:
                 st.markdown('<p class="confidence-high">✅ High Confidence - Very likely correct</p>', 
                            unsafe_allow_html=True)
@@ -192,32 +169,18 @@ def main():
                 st.markdown('<p class="confidence-low">❗ Low Confidence - Consider expert consultation</p>', 
                            unsafe_allow_html=True)
             
-            # Top predictions chart
             st.subheader("📈 All Predictions")
-            
-            # Prepare data for chart
             all_preds = result['all_predictions']
             df = pd.DataFrame([
                 {'Disease': k.replace('_', ' '), 'Confidence': v * 100} 
                 for k, v in all_preds.items()
             ]).sort_values('Confidence', ascending=True)
             
-            # Create horizontal bar chart
-            fig = px.bar(
-                df, 
-                x='Confidence', 
-                y='Disease',
-                orientation='h',
-                title='Confidence Scores for All Classes',
-                color='Confidence',
-                color_continuous_scale='Viridis'
-            )
+            fig = px.bar(df, x='Confidence', y='Disease', orientation='h', title='Confidence Scores for All Classes', color='Confidence', color_continuous_scale='Viridis')
             fig.update_layout(height=400)
             st.plotly_chart(fig, use_container_width=True)
             
-            # Disease information
             disease_info = predictor.get_disease_info(predicted_class)
-            
             st.markdown(f"""
             <div class="disease-info">
                 <h3>🔬 Disease Information</h3>
@@ -227,25 +190,23 @@ def main():
             </div>
             """, unsafe_allow_html=True)
             
-            # Detailed results in expander
             with st.expander("📋 Detailed Results"):
                 st.json(result)
         
         else:
             st.info("Upload an image and click 'Predict Disease' to see results here.")
     
-    # Footer
     st.markdown("---")
     st.markdown("""
     <div style='text-align: center; color: #666;'>
-                <p>🧑‍💻 Build By Nikhil Kumar | BTECH/10883/22 | BTECH: BIOTECHNOLOGY</p>
-                <p>🏫 BIRLA INSTITUTE OF TECHNOLOGY MESRA, RANCHI ,JHARKHAND</p>
-                <p>🌱 Plant Disease Detection System | Built with Streamlit</p>
-            <p>For educational and research purposes. Always consult agricultural experts for serious issues.</p>
+            <p>🧑‍💻 Build By Nikhil Kumar | BTECH/10883/22 | BTECH: BIOTECHNOLOGY</p>
+            <p>🏫 BIRLA INSTITUTE OF TECHNOLOGY MESRA, RANCHI ,JHARKHAND</p>
+            <p>🌱 Plant Disease Detection System | Built with Streamlit</p>
+        <p>For educational and research purposes. Always consult agricultural experts for serious issues.</p>
     </div>
     """, unsafe_allow_html=True)
 
-# Additional pages
+    
 def show_model_info():
     st.header("🧠 Model Information")
     
@@ -254,10 +215,10 @@ def show_model_info():
     with col1:
         st.subheader("Architecture")
         st.markdown("""
-        - **Type**: Convolutional Neural Network (CNN)
+        - **Strategy**: Transfer Learning & Fine-Tuning
+        - **Base Models**: EfficientNetV2, ResNet50V2
         - **Input Size**: 224 x 224 x 3
-        - **Layers**: 4 Conv2D blocks with BatchNorm
-        - **Dense Layers**: 2 fully connected layers
+        - **Classifier Head**: GlobalAveragePooling2D -> Dropout -> Dense
         - **Output**: 5 disease classes
         """)
     
@@ -265,20 +226,35 @@ def show_model_info():
         st.subheader("Training Details")
         st.markdown("""
         - **Dataset**: PlantVillage
-        - **Optimizer**: Adam
-        - **Loss**: Categorical Crossentropy
-        - **Metrics**: Accuracy
-        - **Augmentation**: Rotation, Shift, Zoom, Flip
+        - **Data Pipeline**: High-Performance `tf.data` with `.cache()` and `.prefetch()`
+        - **Optimizer**: Adam with a low learning rate for fine-tuning
+        - **Training**: Two-stage fine-tuning (Head training then full model)
+        - **Augmentation**: Keras Preprocessing Layers (RandomFlip, RandomRotation)
         """)
     
-    # Model performance (if available)
-    if os.path.exists('models/training_history.png'):
-        st.subheader("📊 Training History")
-        st.image('models/training_history.png')
-    
-    if os.path.exists('models/confusion_matrix.png'):
-        st.subheader("🎯 Confusion Matrix")
-        st.image('models/confusion_matrix.png')
+    st.markdown("---")
+    st.subheader("📊 Model Performance")
+
+    # Create columns for each model's results
+    model_col1, model_col2 = st.columns(2)
+
+    with model_col1:
+        st.markdown("#### EfficientNetV2 Results")
+        # Check for and display EfficientNetV2's specific output files
+        if os.path.exists('models/efficientnetv2_training_history.png'):
+            st.image('models/efficientnetv2_training_history.png', caption="Training History")
+        
+        if os.path.exists('models/efficientnetv2_confusion_matrix.png'):
+            st.image('models/efficientnetv2_confusion_matrix.png', caption="Confusion Matrix")
+
+    with model_col2:
+        st.markdown("#### ResNet50V2 Results")
+        # Check for and display ResNet50V2's specific output files
+        if os.path.exists('models/resnet50v2_training_history.png'):
+            st.image('models/resnet50v2_training_history.png', caption="Training History")
+        
+        if os.path.exists('models/resnet50v2_confusion_matrix.png'):
+            st.image('models/resnet50v2_confusion_matrix.png', caption="Confusion Matrix")
 
 def show_dataset_info():
     st.header("📊 Dataset Information")
@@ -302,34 +278,34 @@ def show_dataset_info():
     3. **Apple Cedar Apple Rust** - Disease causing yellow spots and orange lesions
     4. **Apple Healthy** - Healthy apple plants with no disease
     5. **Tomato Bacterial Spot** - Bacterial disease causing small dark spots
-    """)
+    
+    
+    ### IMAGES FOR  MODEL TAKEN FROM PLANTVILLAGE DATASET :
 
-# Navigation
+    
+    This model is trained on 5 classes:
+    1. **TRAINING-** - 4242 images.
+    2. **VALIDATION-** - 1060 images.
+    4. **TOTAL-** - 5302 images.
+
+
+
+
+     """        
+                )
+
+
 def show_navigation():
     pages = {
         "🏠 Home": main,
         "🧠 Model Info": show_model_info,
         "📊 Dataset Info": show_dataset_info
     }
-    
-    # Page selection
-    if 'page' not in st.session_state:
-        st.session_state.page = "🏠 Home"
-    
-    # Navigation in sidebar
     with st.sidebar:
         st.markdown("---")
-        selected_page = st.radio("Navigation", list(pages.keys()))
-        
-        if selected_page != st.session_state.page:
-            st.session_state.page = selected_page
-            st.rerun()
-    
-    # Show selected page
-    pages[st.session_state.page]()
+        st.header("Navigation")
+        selected_page = st.radio("Go to", list(pages.keys()))
+    pages[selected_page]()
 
 if __name__ == "__main__":
-    if len(st.session_state) == 0:
-        show_navigation()
-    else:
-        show_navigation() 
+    show_navigation()
